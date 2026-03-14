@@ -54,6 +54,3 @@ Os dados são salvos automaticamente no arquivo `financas.db`
 na mesma pasta do `main.py`.
 
 ---
-
-## Próximas evoluções
-- [ ] Tela de edição de movimentação

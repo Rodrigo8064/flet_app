@@ -21,7 +21,7 @@ def build_settings(page: ft.Page):
     )
 
     def _toggle_modo(e):
-        import_mode['sobrescrever'] = e.control.value
+        import_mode['overwrite'] = e.control.value
         toggle_label.value = (
             'Substituir TODOS os dados ao to_import'
             if e.control.value
@@ -32,11 +32,17 @@ def build_settings(page: ft.Page):
         )
         page.update()
 
-    def on_save_result(e: ft.FilePickerUploadEvent):
-        if not e.path:
+
+    async def on_save_result(e: ft.Event[ft.Button]):
+        file_path = await ft.FilePicker().save_file(
+            dialog_title='Salvar Backup',
+            file_name='financas_backup.csv',
+            allowed_extensions=['csv'],
+        )
+        if not file_path:
             return
         try:
-            path = backup.export_csv(e.path)
+            path = backup.export_csv(file_path)
             movs = db.list_movements()
             status_text.value = f'{len(movs)} registros exportados para:\n{path}'
             status_text.color = tools.INCOME_COLOR
@@ -44,23 +50,18 @@ def build_settings(page: ft.Page):
             status_text.value = f'Erro ao exportar: {ex}'
             status_text.color = tools.EXPENSE_COLOR
         page.update()
- 
-    save_picker = ft.FilePicker()
-    save_picker.on_result = on_save_result
-    page.overlay.append(save_picker)
-    page.update()
 
-    async def export(e):
-        await save_picker.save_file(
-            dialog_title='Salvar backup',
-            file_name='financas_backup.csv',
+
+    async def on_pick_result(e: ft.Event[ft.Button]):
+        file = await ft.FilePicker().pick_files(
+            dialog_title='Selecionar backup CSV',
             allowed_extensions=['csv'],
+            allow_multiple=False,
+            with_data=True
         )
-
-    def on_pick_result(e: ft.FilePickerUploadEvent):
-        if not e.files:
+        if not file:
             return
-        chosen = e.files[0].path
+        chosen = file[0].path
         try:
             qtd, erros = backup.import_csv(
                 path=chosen,
@@ -78,18 +79,7 @@ def build_settings(page: ft.Page):
             status_text.value = f'Erro ao importar: {ex}'
             status_text.color = tools.EXPENSE_COLOR
         page.update()
- 
-    pick_picker = ft.FilePicker()
-    pick_picker.on_result = on_pick_result
-    page.overlay.append(pick_picker)
-    page.update()
 
-    async def to_import(e):
-        await pick_picker.pick_files(
-            dialog_title='Selecionar backup CSV',
-            allowed_extensions=['csv'],
-            allow_multiple=False,
-        )
 
     def section(title, subtitle, icon, color, btn_label, btn_action, extras=None):
         return tools.card(
@@ -144,7 +134,7 @@ def build_settings(page: ft.Page):
         icon=ft.Icons.UPLOAD_FILE_OUTLINED,
         color=tools.ACCENT,
         btn_label='Exportar agora',
-        btn_action=export,
+        btn_action=on_save_result,
     )
 
     import_card = section(
@@ -153,7 +143,7 @@ def build_settings(page: ft.Page):
         icon=ft.Icons.DOWNLOAD_OUTLINED,
         color='#FF8C42',
         btn_label='Importar agora',
-        btn_action=to_import,
+        btn_action=on_pick_result,
         extras=[
             ft.Row([toggle, toggle_label], spacing=8),
         ],

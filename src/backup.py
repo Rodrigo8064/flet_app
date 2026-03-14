@@ -29,11 +29,26 @@ def export_csv(path: str | Path = BACKUP_PATH) -> Path:
     path = Path(path)
     movs = list_movements()
 
+    field_mapping = {
+        'id': 'id',
+        'data': 'data',
+        'modo_pagamento': 'payment_method',
+        'tipo': 'type',
+        'valor': 'value',
+        'conta': 'account_id',
+        'categoria': 'category',
+        'observacao': 'observation',
+    }
+
     with open(path, 'w', newline='', encoding='utf-8-sig') as f:
-        writer = csv.DictWriter(f, fieldnames=HEADER, delimiter=';')
+        writer = csv.DictWriter(f, fieldnames=HEADER, delimiter=',')
         writer.writeheader()
         for m in movs:
-            writer.writerow({k: m.get(k, '') for k in HEADER})
+            row = {}
+            for header in HEADER:
+                key = field_mapping.get(header, header)
+                row[header] = m.get(key, '')
+            writer.writerow(row)
 
     return path
 
@@ -54,7 +69,7 @@ def import_csv(
     account_cache: dict[str, int] = {c['name']: c['id'] for c in list_accounts()}
 
     with open(path, newline='', encoding='utf-8-sig') as f:
-        reader = csv.DictReader(f, delimiter=';')
+        reader = csv.DictReader(f, delimiter=',')
 
         required_fields = {
             'data',
@@ -82,11 +97,11 @@ def import_csv(
                 insert_movement(
                     data=line['data'].strip(),
                     payment_method=line['modo_pagamento'].strip(),
-                    tipo=line['tipo'].strip(),
+                    m_type=line['tipo'].strip(),
                     value=value,
-                    cartao_id=account_cache[account_name],
-                    categoria=line['categoria'].strip(),
-                    observacao=line.get('observacao', '').strip(),
+                    account_id=account_cache[account_name],
+                    category=line['categoria'].strip(),
+                    observation=line.get('observacao', '').strip(),
                 )
                 imported += 1
             except Exception as exc:
