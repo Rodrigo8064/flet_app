@@ -36,8 +36,8 @@ def build_new(page: ft.Page):
         label='Observação (opcional)', multiline=True, min_lines=2, **field
     )
     dd_payment_method = ft.Dropdown(label='Modo de pagamento', **field)
-    dd_account = ft.Dropdown(label='Conta', **field)
-    dd_cat = ft.Dropdown(label='Categoria', **field)
+    dd_account = ft.Dropdown(label='Conta', menu_height=200, **field)
+    dd_cat = ft.Dropdown(label='Categoria', menu_height=200, **field)
     error = ft.Text('', color=tools.EXPENSE_COLOR, size=12)
 
     account_map: dict[str, int] = {}

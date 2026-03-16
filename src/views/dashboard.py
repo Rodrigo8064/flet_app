@@ -16,6 +16,9 @@ FILTER_OPTIONS = [
     ('Tudo', None)
 ]
 
+MAX_CHART_POINTS = 60
+
+
 def _filter_movs(movs: list, days: int | None) -> list:
     if days is None:
         return movs
@@ -52,17 +55,25 @@ def _build_wealth_chart(movs: list) -> ft.Container:
         delta = m['value'] if m['type'] == 'Receita' else -m['value']
         per_day[m['data']] += delta
 
-    points: list[tuple[int, float, str]] = []
+    points_all: list[tuple[int, float, str]] = []
     accumulated = 0.0
     for i, (data, delta) in enumerate(sorted(per_day.items())):
         accumulated += delta
-        points.append((i, round(accumulated, 2), data))
+        points_all.append((i, round(accumulated, 2), data))
 
-    if not points:
+    if not points_all:
         return tools.card(
             ft.Text('Sem dados', color=tools.TEXT_SECONDARY, size=13),
             padding=16,
         )
+
+    if len(points_all) > MAX_CHART_POINTS:
+        step = len(points_all) / MAX_CHART_POINTS
+        indices = {int(i * step) for i in range(MAX_CHART_POINTS)}
+        indices.add(len(points_all) - 1)
+        points = [points_all[i] for i in sorted(indices)]
+    else:
+        points = points_all
 
     xs = [p[0] for p in points]
     ys = [p[1] for p in points]

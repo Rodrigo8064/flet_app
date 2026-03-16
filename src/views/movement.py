@@ -5,9 +5,13 @@ from utils import Utils
 
 tools = Utils()
 
+PAGE_SIZE = 20
+
 
 def build_movimentes(page: ft.Page):
     current_filter = {'type': 'Todos'}
+    current_page = {'n': 0}
+    all_filtered = {'data': []}
     list_col = ft.Column(spacing=8)
     chips_row = ft.Row(spacing=8)
 
@@ -51,12 +55,14 @@ def build_movimentes(page: ft.Page):
             label="Conta",
             value=m.get("account"),
             options=[ft.dropdown.Option(c["name"]) for c in accounts],
+            menu_height=200,
             **field,
         )
         dd_category = ft.Dropdown(
             label="Categoria",
             value=m.get("category"),
             options=[ft.dropdown.Option(c["name"]) for c in category],
+            menu_height=200,
             **field,
         )
         erro = ft.Text("", color=tools.EXPENSE_COLOR, size=12)
@@ -161,99 +167,127 @@ def build_movimentes(page: ft.Page):
         )
         page.show_dialog(dialog)
 
+    def item(m):
+        def delete(e, mov_id=m['id']):
+            db.delete_movement(mov_id)
+            tools.snack(
+                page,
+                'Movimentação excluída.',
+                tools.EXPENSE_COLOR,
+            )
+            refresh_list()
+
+        return ft.Container(
+            content=ft.Row(
+                [
+                    ft.Container(
+                        content=tools.icon_type(m['type']),
+                        bgcolor=tools.BG_CARD2,
+                        border_radius=10,
+                        padding=8,
+                    ),
+                    ft.Column(
+                        [
+                            ft.Text(
+                                m['category'],
+                                size=13,
+                                color=tools.TEXT_PRIMARY,
+                                weight=ft.FontWeight.W_500,
+                            ),
+                            ft.Text(
+                                f'{m["data"]}  •  {m["account"]}',
+                                size=11,
+                                color=tools.TEXT_SECONDARY,
+                            ),
+                            ft.Text(
+                                m.get('observation', ''),
+                                size=11,
+                                color=tools.TEXT_SECONDARY,
+                                visible=bool(m.get('observation')),
+                            ),
+                        ],
+                        spacing=1,
+                        expand=True,
+                    ),
+                    ft.Column(
+                        [
+                            ft.Text(
+                                f'{"+ " if m["type"] == "Receita" else "- "}{tools.format_value(m["value"])}',
+                                size=13,
+                                weight=ft.FontWeight.W_600,
+                                color=tools.color_type(m['type']),
+                            ),
+                            ft.Row(
+                                [
+                                    ft.IconButton(
+                                        ft.Icons.EDIT_OUTLINED,
+                                        icon_color=tools.ACCENT,
+                                        icon_size=18,
+                                        padding=ft.Padding.all(0),
+                                        tooltip='Editar',
+                                        on_click=lambda e, mov=m: open_edit_dialog(mov),
+                                    ),
+                                    ft.IconButton(
+                                        ft.Icons.DELETE_OUTLINE,
+                                        icon_color=tools.EXPENSE_COLOR,
+                                        icon_size=18,
+                                        on_click=delete,
+                                        padding=ft.Padding.all(0),
+                                        tooltip='Excluir'
+                                    ),
+                                ],
+                                spacing=0
+                            ),
+                        ],
+                        horizontal_alignment=ft.CrossAxisAlignment.END,
+                        spacing=0,
+                    ),
+                ],
+                spacing=10,
+            ),
+            bgcolor=tools.BG_CARD,
+            border_radius=12,
+            padding=ft.Padding.symmetric(horizontal=12, vertical=10),
+            border=ft.Border.all(1, tools.BORDER_COLOR),
+        )
+
+    def render_page():
+        filtered = all_filtered['data']
+        end = (current_page['n'] + 1) * PAGE_SIZE
+        paginated = filtered[:end]
+        total = len(filtered)
+ 
+        controls = [item(m) for m in paginated]
+ 
+        if end < total:
+            remaining = total - end
+            controls.append(
+                ft.Container(
+                    content=ft.TextButton(
+                        f'Carregar mais ({remaining} restantes)',
+                        style=ft.ButtonStyle(color=tools.ACCENT),
+                        on_click=lambda e: load_more(),
+                    ),
+                    alignment=ft.Alignment(0, 0),
+                )
+            )
+ 
+        controls.append(ft.Container(height=80))
+        list_col.controls = controls
+        page.update()
+
+    def load_more():
+        current_page['n'] += 1
+        render_page()
+
     def refresh_list():
         movs = db.list_movements()
-        new_filter = current_filter['type']
-        filtered = [m for m in movs if new_filter == 'Todos' or m['type'] == new_filter]
-
-        def item(m):
-            def delete(e, mov_id=m['id']):
-                db.delete_movement(mov_id)
-                tools.snack(
-                    page,
-                    'Movimentação excluída.',
-                    tools.EXPENSE_COLOR,
-                )
-                refresh_list()
-
-            return ft.Container(
-                content=ft.Row(
-                    [
-                        ft.Container(
-                            content=tools.icon_type(m['type']),
-                            bgcolor=tools.BG_CARD2,
-                            border_radius=10,
-                            padding=8,
-                        ),
-                        ft.Column(
-                            [
-                                ft.Text(
-                                    m['category'],
-                                    size=13,
-                                    color=tools.TEXT_PRIMARY,
-                                    weight=ft.FontWeight.W_500,
-                                ),
-                                ft.Text(
-                                    f'{m["data"]}  •  {m["account"]}',
-                                    size=11,
-                                    color=tools.TEXT_SECONDARY,
-                                ),
-                                ft.Text(
-                                    m.get('observation', ''),
-                                    size=11,
-                                    color=tools.TEXT_SECONDARY,
-                                    visible=bool(m.get('observation')),
-                                ),
-                            ],
-                            spacing=1,
-                            expand=True,
-                        ),
-                        ft.Column(
-                            [
-                                ft.Text(
-                                    f'{"+ " if m["type"] == "Receita" else "- "}{tools.format_value(m["value"])}',
-                                    size=13,
-                                    weight=ft.FontWeight.W_600,
-                                    color=tools.color_type(m['type']),
-                                ),
-                                ft.Row(
-                                    [
-                                        ft.IconButton(
-                                            ft.Icons.EDIT_OUTLINED,
-                                            icon_color=tools.ACCENT,
-                                            icon_size=18,
-                                            padding=ft.Padding.all(0),
-                                            tooltip='Editar',
-                                            on_click=lambda e, mov=m: open_edit_dialog(mov),
-                                        ),
-                                        ft.IconButton(
-                                            ft.Icons.DELETE_OUTLINE,
-                                            icon_color=tools.EXPENSE_COLOR,
-                                            icon_size=18,
-                                            on_click=delete,
-                                            padding=ft.Padding.all(0),
-                                            tooltip='Excluir'
-                                        ),
-                                    ],
-                                    spacing=0
-                                ),
-                            ],
-                            horizontal_alignment=ft.CrossAxisAlignment.END,
-                            spacing=0,
-                        ),
-                    ],
-                    spacing=10,
-                ),
-                bgcolor=tools.BG_CARD,
-                border_radius=12,
-                padding=ft.Padding.symmetric(horizontal=12, vertical=10),
-                border=ft.Border.all(1, tools.BORDER_COLOR),
-            )
-
-        list_col.controls = (
-            [item(m) for m in filtered]
-            if filtered
-            else [
+        f = current_filter['type']
+        all_filtered['data'] = [m for m in movs if f == 'Todos' or m['type'] == f]
+        current_page['n'] = 0
+ 
+        if not all_filtered['data']:
+            list_col.controls = [
                 ft.Container(
                     content=ft.Text(
                         'Nenhuma movimentação encontrada.',
@@ -265,8 +299,10 @@ def build_movimentes(page: ft.Page):
                     alignment=ft.Alignment(0, 0),
                 )
             ]
-        )
-        page.update()
+            page.update()
+            return
+ 
+        render_page()
 
     def set_filter(m_type):
         current_filter['type'] = m_type
@@ -302,7 +338,7 @@ def build_movimentes(page: ft.Page):
                         chips_row,
                         ft.Container(height=4),
                         list_col,
-                        ft.Container(height=80),
+                        # ft.Container(height=80),
                     ],
                     scroll=ft.ScrollMode.AUTO,
                     spacing=8,

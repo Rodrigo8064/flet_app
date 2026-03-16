@@ -1,12 +1,13 @@
 import sqlite3
+import os
 from pathlib import Path
 
-BASE_DIR = Path(__file__).parent
-DB_PATH = BASE_DIR / 'financas.db'
+# BASE_DIR = Path(__file__).parent
+# DB_PATH = BASE_DIR / 'financas.db'
 
 # trocar para esta configuracao antes de buildar para producao
-# BASE_DIR = Path(os.getenv("FLET_APP_STORAGE_DATA", Path(__file__).parent.parent))
-# DB_PATH  = BASE_DIR / "financas.db"
+BASE_DIR = Path(os.getenv("FLET_APP_STORAGE_DATA", Path(__file__).parent.parent))
+DB_PATH  = BASE_DIR / "financas.db"
 
 _conn: sqlite3.Connection | None = None
 
@@ -51,6 +52,19 @@ def initialize_database() -> None:
         )
     """)
 
+    conn.execute("""
+        CREATE INDEX IF NOT EXISTS idx_movements_data
+        ON movements (data DESC)
+    """)
+    conn.execute("""
+        CREATE INDEX IF NOT EXISTS idx_movements_account
+        ON movements (account_id)
+    """)
+    conn.execute("""
+        CREATE INDEX IF NOT EXISTS idx_movements_type
+        ON movements (type)
+    """)
+
     _seed_accounts(conn)
     _seed_categories(conn)
 
@@ -60,7 +74,7 @@ def initialize_database() -> None:
 def _seed_accounts(conn: sqlite3.Connection) -> None:
     existe = conn.execute('SELECT COUNT(*) FROM accounts').fetchone()[0]
     if existe == 0:
-        patterns = ['Inter', 'Itaú']
+        patterns = ['Inter', 'Itaú', 'Caixa', 'Porto', 'MagaluPay', 'Ticket']
         conn.executemany(
             'INSERT INTO accounts (name) VALUES (?)',
             [(c,) for c in patterns],
@@ -71,7 +85,9 @@ def _seed_categories(conn: sqlite3.Connection) -> None:
     existe = conn.execute('SELECT COUNT(*) FROM categories').fetchone()[0]
     if existe == 0:
         patterns = [
-            'Outros',
+            'Outros', 'Carro', 'Academia', 'Pagamentos', 'Curso', 'Estética', 'Lazer',
+            'Mercado', 'Farmacia', 'Presentes', 'Vestuario', 'Viagem', 'Celular',
+            'Refeição', 'Uber'
         ]
         conn.executemany(
             'INSERT INTO categories (name) VALUES (?)',
@@ -80,7 +96,7 @@ def _seed_categories(conn: sqlite3.Connection) -> None:
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# CARTÕES
+# contas
 # ══════════════════════════════════════════════════════════════════════════════
 def list_accounts() -> list[dict]:
     conn = _connect()
@@ -99,6 +115,23 @@ def insert_account(name: str) -> int:
         return cursor.lastrowid
     except sqlite3.IntegrityError:
         raise ValueError(f"Conta '{name}' já existe.")
+
+
+def get_account_summary(account_id: int) -> dict:
+    conn = _connect()
+    row = conn.execute("""
+        SELECT
+            COUNT(*)  AS qtd,
+            SUM(CASE WHEN type = 'Receita' THEN value ELSE 0 END) AS receita,
+            SUM(CASE WHEN type = 'Despesa' THEN value ELSE 0 END) AS despesa
+        FROM movements
+        WHERE account_id = ?
+    """, (account_id,)).fetchone()
+    result = dict(row)
+    result['receita'] = result['receita'] or 0.0
+    result['despesa'] = result['despesa'] or 0.0
+    result['saldo'] = result['receita'] - result['despesa']
+    return result
 
 
 # ══════════════════════════════════════════════════════════════════════════════

@@ -19,22 +19,24 @@ def build_accounts(page: ft.Page):
     list_col = ft.Column(spacing=12, scroll=ft.ScrollMode.AUTO)
 
     def refresh():
-        movs = db.list_movements()
         accounts = db.list_accounts()
         totals = {}
 
         for c in accounts:
-            movs_c = [m for m in movs if m['account_id'] == c['id']]
-            if not movs_c:
-                continue
-            rec = sum(m['value'] for m in movs_c if m['type'] == 'Receita')
-            des = sum(m['value'] for m in movs_c if m['type'] == 'Despesa')
-            totals[c['name']] = {
-                'receita': rec,
-                'despesa': des,
-                'saldo': rec - des,
-                'qtd': len(movs_c),
-            }
+            summary = db.get_account_summary(c['id'])
+            if summary['qtd'] > 0:
+                totals[c['name']] = summary
+            # movs_c = [m for m in movs if m['account_id'] == c['id']]
+            # if not movs_c:
+            #     continue
+            # rec = sum(m['value'] for m in movs_c if m['type'] == 'Receita')
+            # des = sum(m['value'] for m in movs_c if m['type'] == 'Despesa')
+            # totals[c['name']] = {
+            #     'receita': rec,
+            #     'despesa': des,
+            #     'saldo': rec - des,
+            #     'qtd': len(movs_c),
+            # }
 
         def account_card(i, name, data):
             c1, c2 = COLOR_ACCOUNT[i % len(COLOR_ACCOUNT)]
