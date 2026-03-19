@@ -1,39 +1,37 @@
 import flet as ft
 
-import backup
 import database as db
-from utils import Utils
-
-tools = Utils()
+from settings.backup import ImportCSV, ExportCSV
+from utils import Theme, UIComponents
 
 
 def build_settings(page: ft.Page):
-    status_text = ft.Text('', size=13, color=tools.TEXT_SECONDARY)
+    status_text = ft.Text('', size=13, color=Theme.TEXT_SECONDARY)
     import_mode = {'overwrite': False}
 
     toggle_label = ft.Text(
-        'Apenas adicionar novos registros', size=12, color=tools.TEXT_SECONDARY
+        'Apenas adicionar novos registros', size=12, color=Theme.TEXT_SECONDARY
     )
     toggle = ft.Switch(
         value=False,
-        active_color=tools.ACCENT,
+        active_color=Theme.ACCENT,
         on_change=lambda e: _toggle_modo(e),
     )
 
     def _toggle_modo(e):
         import_mode['overwrite'] = e.control.value
         toggle_label.value = (
-            'Substituir TODOS os dados ao to_import'
+            'Substituir TODOS os dados ao importar'
             if e.control.value
             else 'Apenas adicionar novos registros'
         )
         toggle_label.color = (
-            tools.EXPENSE_COLOR if e.control.value else tools.TEXT_SECONDARY
+            Theme.EXPENSE_COLOR if e.control.value else Theme.TEXT_SECONDARY
         )
         page.update()
 
 
-    async def on_save_result(e: ft.Event[ft.Button]):
+    async def _on_export(e: ft.Event[ft.Button]):
         file_path = await ft.FilePicker().save_file(
             dialog_title='Salvar Backup',
             file_name='financas_backup.csv',
@@ -42,17 +40,17 @@ def build_settings(page: ft.Page):
         if not file_path:
             return
         try:
-            path = backup.export_csv(file_path)
-            movs = db.list_movements()
-            status_text.value = f'{len(movs)} registros exportados para:\n{path}'
-            status_text.color = tools.INCOME_COLOR
+            path = ExportCSV.export(file_path)
+            movements = db.list_movements()
+            status_text.value = f'{len(movements)} registros exportados para:\n{path}'
+            status_text.color = Theme.INCOME_COLOR
         except Exception as ex:
             status_text.value = f'Erro ao exportar: {ex}'
-            status_text.color = tools.EXPENSE_COLOR
+            status_text.color = Theme.EXPENSE_COLOR
         page.update()
 
 
-    async def on_pick_result(e: ft.Event[ft.Button]):
+    async def _on_import(e: ft.Event[ft.Button]):
         file = await ft.FilePicker().pick_files(
             dialog_title='Selecionar backup CSV',
             allowed_extensions=['csv'],
@@ -61,35 +59,42 @@ def build_settings(page: ft.Page):
         )
         if not file:
             return
-        chosen = file[0].path
         try:
-            qtd, erros = backup.import_csv(
-                path=chosen,
+            count, errors = ImportCSV.import_all(
+                path=file[0].path,
                 overwrite=import_mode['overwrite'],
             )
-            msg = f'{qtd} registros importados.'
-            if erros:
-                msg += f'\n{len(erros)} linha(s) com erro:\n' + '\n'.join(erros[:3])
-            status_text.value = msg
-            status_text.color = tools.INCOME_COLOR if not erros else '#FF8C42'
+            message = f'{count} registros importados.'
+            if errors:
+                message += f'\n{len(errors)} linha(s) com erro:\n' + '\n'.join(errors[:3])
+            status_text.value = message
+            status_text.color = Theme.INCOME_COLOR if not errors else '#FF8C42'
         except ValueError as ex:
             status_text.value = f'CSV inválido: {ex}'
-            status_text.color = tools.EXPENSE_COLOR
+            status_text.color = Theme.EXPENSE_COLOR
         except Exception as ex:
             status_text.value = f'Erro ao importar: {ex}'
-            status_text.color = tools.EXPENSE_COLOR
+            status_text.color = Theme.EXPENSE_COLOR
         page.update()
 
 
-    def section(title, subtitle, icon, color, btn_label, btn_action, extras=None):
-        return tools.card(
+    def _build_section_card(
+        title,
+        subtitle,
+        icon,
+        color,
+        btn_label,
+        btn_action,
+        extras=None
+    ) -> ft.Container:
+        return UIComponents.card(
             ft.Column(
                 [
                     ft.Row(
                         [
                             ft.Container(
                                 content=ft.Icon(icon, color=color, size=20),
-                                bgcolor=tools.BG_CARD2,
+                                bgcolor=Theme.BG_CARD2,
                                 border_radius=10,
                                 padding=10,
                             ),
@@ -99,10 +104,10 @@ def build_settings(page: ft.Page):
                                         title,
                                         size=14,
                                         weight=ft.FontWeight.W_600,
-                                        color=tools.TEXT_PRIMARY,
+                                        color=Theme.TEXT_PRIMARY,
                                     ),
                                     ft.Text(
-                                        subtitle, size=11, color=tools.TEXT_SECONDARY
+                                        subtitle, size=11, color=Theme.TEXT_SECONDARY
                                     ),
                                 ],
                                 spacing=2,
@@ -128,45 +133,45 @@ def build_settings(page: ft.Page):
             padding=16,
         )
 
-    export_card = section(
+    export_card = _build_section_card(
         title='Exportar CSV',
         subtitle='Salva todas as movimentações num arquivo .csv',
         icon=ft.Icons.UPLOAD_FILE_OUTLINED,
-        color=tools.ACCENT,
+        color=Theme.ACCENT,
         btn_label='Exportar agora',
-        btn_action=on_save_result,
+        btn_action=_on_export,
     )
 
-    import_card = section(
+    import_card = _build_section_card(
         title='Importar CSV',
-        subtitle='Restaura dados a partir de um arquivo financas_backup.csv',
+        subtitle='Restaura dados a partir de um arquivo .CSV',
         icon=ft.Icons.DOWNLOAD_OUTLINED,
         color='#FF8C42',
         btn_label='Importar agora',
-        btn_action=on_pick_result,
+        btn_action=_on_import,
         extras=[
             ft.Row([toggle, toggle_label], spacing=8),
         ],
     )
 
-    info_card = tools.card(
+    info_card = UIComponents.card(
         ft.Column(
             [
                 ft.Text(
                     'Como migrar de celular',
                     size=13,
                     weight=ft.FontWeight.W_600,
-                    color=tools.TEXT_PRIMARY,
+                    color=Theme.TEXT_PRIMARY,
                 ),
                 ft.Container(height=4),
                 ft.Text(
                     '1. Neste celular: toque em Exportar\n'
                     '2. Transfira o arquivo financas_backup.csv '
                     '(cabo, Drive, WhatsApp…)\n'
-                    '3. No novo celular: coloque o arquivo na pasta do app\n'
-                    '4. Toque em to_import',
+                    '3. No novo celular: coloque o arquivo na pasta para transferir\n'
+                    '4. Toque em importar',
                     size=12,
-                    color=tools.TEXT_SECONDARY,
+                    color=Theme.TEXT_SECONDARY,
                 ),
             ],
             spacing=2,
@@ -176,7 +181,7 @@ def build_settings(page: ft.Page):
 
     return ft.Column(
         [
-            tools.build_appbar('Configurações'),
+            UIComponents.app_bar('Configurações'),
             ft.Container(
                 content=ft.Column(
                     [

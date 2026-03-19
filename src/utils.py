@@ -1,33 +1,35 @@
 import flet as ft
 
 
-class Utils:
-    def __init__(self):
-        self.INCOME_COLOR = '#00C896'
-        self.EXPENSE_COLOR = '#FF5370'
-        self.BG_DARK = '#0F1117'
-        self.BG_CARD = '#1A1D27'
-        self.BG_CARD2 = '#22263A'
-        self.ACCENT = '#6C63FF'
-        self.TEXT_PRIMARY = '#EAEAFF'
-        self.TEXT_SECONDARY = '#8888AA'
-        self.BORDER_COLOR = '#2E3050'
-        self.ACCOUNT = ['Inter', 'Itaú', 'Ticket']
+class Theme:
+    INCOME_COLOR = '#00C896'
+    EXPENSE_COLOR = '#FF5370'
+    BG_DARK = '#0F1117'
+    BG_CARD = '#1A1D27'
+    BG_CARD2 = '#22263A'
+    ACCENT = '#6C63FF'
+    TEXT_PRIMARY = '#EAEAFF'
+    TEXT_SECONDARY = '#8888AA'
+    BORDER_COLOR = '#2E3050'
 
-    def color_type(self, c_type: str) -> str:
-        return self.INCOME_COLOR if c_type == 'Receita' else self.EXPENSE_COLOR
+    @classmethod
+    def color_for_entry_type(cls, entry_type: str) -> str:
+        return cls.INCOME_COLOR if entry_type == "Receita" else cls.EXPENSE_COLOR
+ 
+    @classmethod
+    def icon_for_entry_type(cls, entry_type: str) -> str:
+        return ft.Icons.ARROW_UPWARD if entry_type == "Receita" else ft.Icons.ARROW_DOWNWARD
 
-    def icon_type(self, i_type: str):
-        return ft.Icon(
-            ft.Icons.ARROW_UPWARD if i_type == 'Receita' else ft.Icons.ARROW_DOWNWARD,
-            color=self.color_type(type),
-            size=18,
-        )
 
-    def format_value(self, v: float) -> str:
-        return f'R$ {v:,.2f}'.replace(',', 'X').replace('.', ',').replace('X', '.')
+class Formatters:
+    @staticmethod
+    def currency(value: float) -> str:
+        return f"R$ {value:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
-    def build_appbar(self, title: str, actions: list = None):
+
+class UIComponents:
+    @staticmethod
+    def app_bar(title: str) -> ft.Container:
         return ft.Container(
             content=ft.Row(
                 [
@@ -35,38 +37,39 @@ class Utils:
                         title,
                         size=20,
                         weight=ft.FontWeight.W_700,
-                        color=self.TEXT_PRIMARY,
-                    )
-                ]
-                + (
-                    actions
-                    or [
-                        ft.Icon(
-                            ft.Icons.NOTIFICATIONS_NONE_OUTLINED,
-                            color=self.TEXT_SECONDARY,
-                            size=24,
-                        )
-                    ]
-                ),
+                        color=Theme.TEXT_PRIMARY,
+                    ),                   
+                ],
                 alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
             ),
-            padding=ft.Padding.symmetric(horizontal=20, vertical=16),
-            bgcolor=self.BG_DARK,
+            padding=ft.Padding.only(left=20, right=20, top=48, bottom=16),
+            bgcolor=Theme.BG_DARK,
         )
 
-    def snack(self, page: ft.Page, msg: str, cor: str = None):
-        page.show_dialog(
-            ft.SnackBar(
-                content=ft.Text(msg, color=ft.Colors.WHITE),
-                bgcolor=cor or self.INCOME_COLOR,
-            )
-        )
-
-    def card(self, content, padding=16, radius=16):
+    @staticmethod
+    def card(content, padding: int = 16, radius: int = 16) -> ft.Container:
         return ft.Container(
             content=content,
-            bgcolor=self.BG_CARD,
+            bgcolor=Theme.BG_CARD,
             border_radius=radius,
             padding=padding,
-            border=ft.Border.all(1, self.BORDER_COLOR),
+            border=ft.Border.all(1, Theme.BORDER_COLOR),
         )
+ 
+    @staticmethod
+    def show_snack_bar(page: ft.Page, message: str, color: str | None = None) -> None:
+        page.show_dialog(
+            ft.SnackBar(
+                content=ft.Text(message, color=ft.Colors.WHITE),
+                bgcolor=color or Theme.INCOME_COLOR,
+            )
+        )
+ 
+    @staticmethod
+    def entry_type_icon(entry_type: str) -> ft.Icon:
+        return ft.Icon(
+            Theme.icon_for_entry_type(entry_type),
+            color=Theme.color_for_entry_type(entry_type),
+            size=18,
+        )
+

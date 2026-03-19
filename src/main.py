@@ -1,21 +1,26 @@
 import flet as ft
 
 import database as db
-from utils import Utils
-from views.accounts import build_accounts
-from views.dashboard import build_dashboard
-from views.movement import build_movimentes
-from views.new_movement import build_new
-from views.settings import build_settings
+from utils import Theme
+from accounts.front import build_accounts
+from dashboard.front import build_dashboard
+from movement.front import build_movimentes
+from new_movement.front import build_new
+from settings.front import build_settings
 
 db.initialize_database()
-tools = Utils()
+_PAGE_BUILDERS: dict[int, callable] = {
+    1: build_movimentes,
+    2: build_new,
+    3: build_accounts,
+    4: build_settings,
+}
 
 
-def main(page: ft.Page):
-    page.title = 'Finanças Pessoais'
+def main(page: ft.Page) -> None:
+    page.title = "Finanças Pessoais"
     page.theme_mode = ft.ThemeMode.DARK
-    page.bgcolor = tools.BG_DARK
+    page.bgcolor = Theme.BG_DARK
     page.padding = 0
     page.window.width = 420
     page.window.height = 860
@@ -23,26 +28,18 @@ def main(page: ft.Page):
     body = ft.Column(expand=True)
     nav_ref = ft.Ref[ft.NavigationBar]()
 
-    def navigate(idx: int):
-        nav_ref.current.selected_index = idx
-        change_page(idx)
+    def go_to_page(index: int) -> None:
+        nav_ref.current.selected_index = index
+        _render_page(index)
 
-    def change_page(idx: int):
-        if idx == 0:
-            body.controls = [build_dashboard(page, navigate)]
+    def _render_page(index: int) -> None:
+        if index == 0:
+            body.controls = [build_dashboard(page, go_to_page)]
         else:
-            pages = [
-                None,
-                build_movimentes,
-                build_new,
-                build_accounts,
-                build_settings,
-            ]
-            body.controls = [pages[idx](page)]
+            builder = _PAGE_BUILDERS.get(index)
+            if builder:
+                body.controls = [builder(page)]
         page.update()
-
-    def mudar_pagina(e):
-        change_page(e.control.selected_index)
 
     nav_bar = ft.NavigationBar(
         ref=nav_ref,
@@ -73,15 +70,15 @@ def main(page: ft.Page):
                 label='Config',
             ),
         ],
-        bgcolor=tools.BG_CARD,
-        indicator_color=tools.ACCENT,
+        bgcolor=Theme.BG_CARD,
+        indicator_color=Theme.ACCENT,
         indicator_shape=ft.RoundedRectangleBorder(radius=10),
         label_behavior=ft.NavigationBarLabelBehavior.ALWAYS_SHOW,
-        on_change=mudar_pagina,
+        on_change=lambda e: _render_page(e.control.selected_index),
         selected_index=0,
     )
 
-    body.controls = [build_dashboard(page, navigate)]
+    body.controls = [build_dashboard(page, go_to_page)]
 
     page.add(
         ft.Column(
