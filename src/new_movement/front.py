@@ -138,10 +138,11 @@ def build_new(page: ft.Page) -> ft.Stack:
                 dialog_error.value = error
                 page.update()
                 return
+            page.pop_dialog()
             UIComponents.show_snack_bar(
                 page, f"Categoria '{field_name.value.strip()}' adicionada!"
             )
-            page.pop_dialog()
+            page.update()
             _reload_dropdowns()
 
         dialog = ft.AlertDialog(

@@ -2,19 +2,19 @@ import sqlite3
 import os
 from pathlib import Path
 
-BASE_DIR = Path(__file__).parent
-DB_PATH = BASE_DIR / 'financas.db'
+# BASE_DIR = Path(__file__).parent
+# DB_PATH = BASE_DIR / 'financas.db'
 
 # trocar para esta configuracao antes de buildar para producao
-# BASE_DIR = Path(os.getenv("FLET_APP_STORAGE_DATA", Path(__file__).parent.parent))
-# DB_PATH  = BASE_DIR / "financas.db"
+BASE_DIR = Path(os.getenv("FLET_APP_STORAGE_DATA", Path(__file__).parent.parent))
+DB_PATH  = BASE_DIR / "financas.db"
 
 class _Database:
- 
+
     def __init__(self, path: Path) -> None:
         self._path = path
         self._conn: sqlite3.Connection | None = None
- 
+
     @property
     def conn(self) -> sqlite3.Connection:
         if self._conn is None:
@@ -23,20 +23,20 @@ class _Database:
             self._conn.execute("PRAGMA journal_mode=WAL")
             self._conn.execute("PRAGMA foreign_keys=ON")
         return self._conn
- 
+
     def close(self) -> None:
         if self._conn is not None:
             self._conn.close()
             self._conn = None
- 
- 
+
+
 _db = _Database(DB_PATH)
 
 
 def _rows_to_dicts(rows) -> list[dict]:
     return [dict(r) for r in rows]
- 
- 
+
+
 def _seed(conn: sqlite3.Connection, table: str, values: list[str]) -> None:
     exists = conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
     if exists == 0:
@@ -48,21 +48,21 @@ def _seed(conn: sqlite3.Connection, table: str, values: list[str]) -> None:
 
 def initialize_database() -> None:
     conn = _db.conn
- 
+
     conn.execute("""
         CREATE TABLE IF NOT EXISTS accounts (
             id   INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT    NOT NULL UNIQUE
         )
     """)
- 
+
     conn.execute("""
         CREATE TABLE IF NOT EXISTS categories (
             id   INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT    NOT NULL UNIQUE
         )
     """)
- 
+
     conn.execute("""
         CREATE TABLE IF NOT EXISTS movements (
             id             INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -75,16 +75,16 @@ def initialize_database() -> None:
             notes          TEXT    NOT NULL DEFAULT ''
         )
     """)
- 
+
     conn.execute("CREATE INDEX IF NOT EXISTS idx_mov_data    ON movements (date DESC)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_mov_account ON movements (account_id)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_mov_type    ON movements (entry_type)")
- 
+
     conn.execute("""
         CREATE INDEX IF NOT EXISTS idx_mov_account_entry_type
         ON movements (account_id, entry_type)
     """)
- 
+
     _seed(conn, "accounts", [
         "Inter", "Itaú", "Caixa", "Porto", "MagaluPay", "Ticket",
     ])
@@ -93,7 +93,7 @@ def initialize_database() -> None:
         "Lazer", "Mercado", "Farmacia", "Presentes", "Vestuario", "Viagem",
         "Celular", "Refeição", "Uber",
     ])
- 
+
     conn.commit()
 
 
@@ -103,8 +103,8 @@ def initialize_database() -> None:
 def list_accounts() -> list[dict]:
     rows = _db.conn.execute("SELECT id, name FROM accounts ORDER BY name").fetchall()
     return _rows_to_dicts(rows)
- 
- 
+
+
 def insert_account(name: str) -> int:
     name = name.strip()
     if not name:
@@ -115,8 +115,8 @@ def insert_account(name: str) -> int:
         return cursor.lastrowid
     except sqlite3.IntegrityError:
         raise ValueError(f"Conta '{name}' já existe.")
- 
- 
+
+
 def get_account_summary(account_id: int) -> dict:
     row = _db.conn.execute("""
         SELECT
@@ -137,8 +137,8 @@ def get_account_summary(account_id: int) -> dict:
 def list_categories() -> list[dict]:
     rows = _db.conn.execute("SELECT id, name FROM categories ORDER BY name").fetchall()
     return _rows_to_dicts(rows)
- 
- 
+
+
 def insert_category(name: str) -> int:
     name = name.strip()
     if not name:

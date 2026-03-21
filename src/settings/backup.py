@@ -89,7 +89,7 @@ class ImportCSV:
         with open(path, newline='', encoding='utf-8-sig') as f:
             reader = csv.DictReader(f, delimiter=',')
             found_fields = set(reader.fieldnames or [])
-            
+
             if not cls.REQUIRED_FIELDS.issubset(found_fields):
                 raise ValueError(
                     f'CSV inválido. Colunas esperadas: {cls.REQUIRED_FIELDS}. '

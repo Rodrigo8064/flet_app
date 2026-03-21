@@ -20,7 +20,7 @@ _FILTER_OPTIONS  = ["Todos", "Receita", "Despesa"]
 def build_movimentes(page: ft.Page) -> ft.Column:
     state = MovementListState()
     list_col  = ft.Column(spacing=8)
-    chips_row = ft.Row(spacing=8)
+    chips_row = ft.Row(spacing=6)
 
     categories = ["Todas"] + [c["name"] for c in db.list_categories()]
 
@@ -31,7 +31,7 @@ def build_movimentes(page: ft.Page) -> ft.Column:
 
     dd_category = ft.Dropdown(
         value="Todas",
-        width=120,
+        width=105,
         options=[ft.dropdown.Option(c) for c in categories],
         border_color=Theme.BORDER_COLOR,
         focused_border_color=Theme.ACCENT,
@@ -147,8 +147,9 @@ def build_movimentes(page: ft.Page) -> ft.Column:
             except Exception as ex:
                 error_text.value = f"Erro ao salvar: {ex}"; page.update(); return
 
-            UIComponents.show_snack_bar(page, "Movimentação atualizada!")
             page.pop_dialog()
+            UIComponents.show_snack_bar(page, "Movimentação atualizada!")
+            page.update()
             render_movement_list(page, list_col, state, _build_movement_item)
  
         dialog = ft.AlertDialog(
@@ -190,13 +191,42 @@ def build_movimentes(page: ft.Page) -> ft.Column:
 
     def _build_movement_item(movement: dict) -> ft.Container:
         def _on_delete(e: ft.ControlEvent, movement_id: int = movement["id"]) -> None:
-            db.delete_movement(movement_id)
-            UIComponents.show_snack_bar(
-                page,
-                'Movimentação excluída.',
-                Theme.EXPENSE_COLOR,
+            def confirm_delete(e):
+                db.delete_movement(movement_id)
+                page.pop_dialog()
+                UIComponents.show_snack_bar(
+                    page,
+                    'Movimentação excluída.',
+                    Theme.EXPENSE_COLOR,
+                )
+                page.update()
+                render_movement_list(page, list_col, state, _build_movement_item)
+
+            page.show_dialog(
+                ft.AlertDialog(
+                    modal=True,
+                    title=ft.Text(
+                        "Excluir Movimentação?",
+                        color=Theme.TEXT_PRIMARY,
+                        weight=ft.FontWeight.W_600,
+                    ),
+                    bgcolor=Theme.BG_CARD,
+                    actions=[
+                        ft.TextButton(
+                            content=ft.Text("Cancelar", color=Theme.TEXT_SECONDARY),
+                            on_click=lambda e: page.pop_dialog(),
+                        ),
+                        ft.Button(
+                            content=ft.Text("Excluir", color=ft.Colors.WHITE),
+                            bgcolor=Theme.EXPENSE_COLOR,
+                            style=ft.ButtonStyle(
+                                shape=ft.RoundedRectangleBorder(radius=8)),
+                            on_click=confirm_delete,
+                        ),
+                    ],
+                    actions_alignment=ft.MainAxisAlignment.END,
+                )
             )
-            render_movement_list(page, list_col, state, _build_movement_item)
 
         sign   = "+ " if movement["entry_type"] == "Receita" else "- "
         amount = f"{sign}{Formatters.currency(movement['value'])}"
@@ -319,7 +349,7 @@ def build_movimentes(page: ft.Page) -> ft.Column:
                         list_col,
                     ],
                     scroll=ft.ScrollMode.AUTO,
-                    spacing=8,
+                    spacing=7,
                 ),
                 expand=True,
                 padding=ft.Padding.symmetric(horizontal=16),

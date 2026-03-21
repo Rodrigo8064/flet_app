@@ -127,13 +127,13 @@ def _compute_chart_points(movements: list[dict]) -> list[ChartPoint]:
         return []
 
     per_day: dict[str, float] = defaultdict(float)
-    for m in sorted(movements, key=lambda m: m["date"]):
+    for m in sorted(movements, key=lambda m: _parse_date(m["date"])):
         delta = m["value"] if m["entry_type"] == "Receita" else -m["value"]
         per_day[m["date"]] += delta
 
     all_points: list[ChartPoint] = []
     accumulated = 0.0
-    for i, (date, delta) in enumerate(sorted(per_day.items())):
+    for i, (date, delta) in enumerate(sorted(per_day.items(), key=lambda x: _parse_date(x[0]))):
         accumulated += delta
         all_points.append(ChartPoint(
             index=i,
@@ -144,7 +144,7 @@ def _compute_chart_points(movements: list[dict]) -> list[ChartPoint]:
     if len(all_points) <= MAX_CHART_POINTS:
         return all_points
 
-    step    = len(all_points) / MAX_CHART_POINTS
+    step = len(all_points) / MAX_CHART_POINTS
     indices = {int(i * step) for i in range(MAX_CHART_POINTS)}
     indices.add(len(all_points) - 1)
     return [all_points[i] for i in sorted(indices)]

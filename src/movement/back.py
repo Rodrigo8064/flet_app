@@ -1,5 +1,7 @@
 import flet as ft
 import database as db
+
+from datetime import datetime
 from utils import Theme
 
 
@@ -70,6 +72,15 @@ def _apply_filters(
 
     if category is not None:
         result = [m for m in result if m["category"] == category]
+
+    def parse_date(m):
+        d = m["date"]
+        try:
+            return datetime.strptime(d, "%d/%m/%Y")
+        except ValueError:
+            return datetime.strptime(d, "%Y-%m-%d")
+
+    result = sorted(result, key=parse_date, reverse=True)
 
     return result
 

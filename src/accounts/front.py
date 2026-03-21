@@ -29,10 +29,11 @@ def build_accounts(page: ft.Page) -> ft.Stack:
         def _on_save(e: ft.ControlEvent) -> None:
             try:
                 db.insert_account(account_name.value or '')
+                page.pop_dialog()
                 UIComponents.show_snack_bar(
                     page, f"Conta '{account_name.value.strip()}' adicionado!"
                 )
-                page.pop_dialog()
+                page.update()
                 render_account_list(page, list_column)
             except ValueError as ex:
                 error.value = str(ex)
