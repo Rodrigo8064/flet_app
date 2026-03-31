@@ -63,6 +63,9 @@ class DashboardData:
 
 def load_dashboard_data(period: Period) -> DashboardData:
     all_movements = db.list_movements()
+    all_movements_sorted = sorted(
+        all_movements, key=lambda m: _parse_date(m["date"]), reverse=True
+    )
     filtered = _filter_by_period(all_movements, period)
 
     return DashboardData(
@@ -70,7 +73,7 @@ def load_dashboard_data(period: Period) -> DashboardData:
         balance=_compute_balance(filtered),
         top_categories=_compute_top_categories(filtered),
         chart_points=_compute_chart_points(filtered),
-        latest=all_movements[:5],
+        latest=all_movements_sorted[:5],
     )
 
 

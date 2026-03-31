@@ -20,7 +20,7 @@ _FILTER_OPTIONS  = ["Todos", "Receita", "Despesa"]
 def build_movimentes(page: ft.Page) -> ft.Column:
     state = MovementListState()
     list_col  = ft.Column(spacing=8)
-    chips_row = ft.Row(spacing=6)
+    chips_row = ft.Row(spacing=8)
 
     categories = ["Todas"] + [c["name"] for c in db.list_categories()]
 
@@ -31,7 +31,7 @@ def build_movimentes(page: ft.Page) -> ft.Column:
 
     dd_category = ft.Dropdown(
         value="Todas",
-        width=105,
+        width=140,
         options=[ft.dropdown.Option(c) for c in categories],
         border_color=Theme.BORDER_COLOR,
         focused_border_color=Theme.ACCENT,
@@ -341,10 +341,11 @@ def build_movimentes(page: ft.Page) -> ft.Column:
                 content=ft.Column(
                     [
                         ft.Row(
-                            [chips_row, dd_category],
+                            chips_row,
                             alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                             vertical_alignment=ft.CrossAxisAlignment.CENTER,
                         ),
+                        ft.Row([dd_category]),
                         ft.Container(height=4),
                         list_col,
                     ],
